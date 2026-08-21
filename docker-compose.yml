@@ -1,0 +1,23 @@
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: svastha
+      POSTGRES_PASSWORD: svastha
+      POSTGRES_DB: svastha
+    ports:
+      - "5432:5432"
+    volumes:
+      - dbdata:/var/lib/postgresql/data
+  api:
+    build:
+      context: ./api
+      dockerfile: src/Svastha.Api/Dockerfile
+    environment:
+      SVASTHA_DB: "Host=db;Port=5432;Database=svastha;Username=svastha;Password=svastha"
+    ports:
+      - "5036:8080"
+    depends_on:
+      - db
+volumes:
+  dbdata:

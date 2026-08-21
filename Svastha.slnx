@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Svastha.Api/Svastha.Api.csproj" />
+    <Project Path="src/Svastha.Migrations/Svastha.Migrations.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Svastha.Tests/Svastha.Tests.csproj" />
+  </Folder>
+</Solution>
