@@ -1,7 +1,15 @@
-using DbUp;
+﻿using DbUp;
+using Microsoft.Extensions.Configuration;
+
+// Environment variables are added last so they override user secrets, keeping
+// Fly, Render, and docker-compose working unchanged.
+var configuration = new ConfigurationBuilder()
+    .AddUserSecrets(typeof(Program).Assembly, optional: true)
+    .AddEnvironmentVariables()
+    .Build();
 
 var connectionString =
-    Environment.GetEnvironmentVariable("SVASTHA_DB")
+    configuration["SVASTHA_DB"]
     ?? "Host=localhost;Port=5432;Database=svastha;Username=svastha;Password=svastha";
 
 EnsureDatabase.For.PostgresqlDatabase(connectionString);

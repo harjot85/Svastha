@@ -16,7 +16,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddOpenApi();
 
 var connectionString =
-    Environment.GetEnvironmentVariable("SVASTHA_DB")
+    builder.Configuration["SVASTHA_DB"]
     ?? "Host=localhost;Port=5432;Database=svastha;Username=svastha;Password=svastha";
 
 builder.Services.AddSingleton(_ => new NpgsqlDataSourceBuilder(connectionString).Build());
