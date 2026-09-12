@@ -1,5 +1,7 @@
 using System.Data;
+using System.Reflection;
 using Dapper;
+using Microsoft.AspNetCore.Authorization;
 using Npgsql;
 using Svastha.Api;
 
@@ -40,6 +42,32 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 app.UseCors("web");
+
+var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "unknown";
+
+// Liveness: process is up. Deliberately touches nothing external, so it stays
+// green while the database is down.
+app.MapGet("/health", () => Results.Ok(new { status = "ok", version }))
+    .AllowAnonymous();
+
+// Readiness: the process can actually serve traffic, which means reaching Postgres.
+app.MapGet("/ready", async (NpgsqlDataSource dataSource) =>
+{
+    try
+    {
+        await using var connection = await dataSource.OpenConnectionAsync();
+        await connection.ExecuteScalarAsync<int>("select 1");
+
+        return Results.Ok(new { status = "ready" });
+    }
+    catch (Exception ex)
+    {
+        return Results.Json(
+            new { status = "not ready", error = ex.Message },
+            statusCode: StatusCodes.Status503ServiceUnavailable);
+    }
+})
+    .AllowAnonymous();
 
 app.MapPost("/api/ping", async (CreatePingRequest request, NpgsqlDataSource dataSource) =>
 {
