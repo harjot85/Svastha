@@ -482,3 +482,9 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# Local credential scratch files - never commit
+Creds.txt
+
+# Wrangler local state (miniflare sqlite)
+.wrangler/

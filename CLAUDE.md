@@ -6,7 +6,8 @@ Training issue assessment app. Personal use, public repo.
 - .NET Core API, Dapper, DbUp (raw SQL migrations)
 - Postgres + pgvector
 - Vite + React + TypeScript, static PWA
-- Deploy: Fly.io (API), Cloudflare Pages (frontend)
+- Deploy: Render (API), Cloudflare Workers static assets (frontend,
+  configured by client/wrangler.jsonc)
 
 ## Hard rules
 - NEVER use EF Core. Dapper only. No DbContext, no LINQ-to-SQL,

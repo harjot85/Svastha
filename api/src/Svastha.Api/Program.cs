@@ -23,10 +23,21 @@ var connectionString =
 
 builder.Services.AddSingleton(_ => new NpgsqlDataSourceBuilder(connectionString).Build());
 
+// From Cors:AllowedOrigins, so Render can override without a rebuild: either as
+// a JSON array or as Cors__AllowedOrigins="a,b". Trailing slashes are trimmed
+// because an origin carrying one never matches the browser's Origin header.
+var allowedOrigins =
+    builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+    ?? builder.Configuration["Cors:AllowedOrigins"]
+        ?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+    ?? [];
+
+allowedOrigins = [.. allowedOrigins.Select(origin => origin.TrimEnd('/'))];
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("web", policy => policy
-        .WithOrigins("http://localhost:5173")
+        .WithOrigins(allowedOrigins)
         .AllowAnyHeader()
         .AllowAnyMethod());
 });
@@ -39,11 +50,10 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-app.UseHttpsRedirection();
-
-app.UseCors("web");
-
 var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "unknown";
+
+// Mapped above UseHttpsRedirection so a plain-HTTP probe from the platform gets
+// 200 rather than a 307 redirect.
 
 // Liveness: process is up. Deliberately touches nothing external, so it stays
 // green while the database is down.
@@ -51,7 +61,7 @@ app.MapGet("/health", () => Results.Ok(new { status = "ok", version }))
     .AllowAnonymous();
 
 // Readiness: the process can actually serve traffic, which means reaching Postgres.
-app.MapGet("/ready", async (NpgsqlDataSource dataSource) =>
+app.MapGet("/ready", async (NpgsqlDataSource dataSource, ILogger<Program> logger) =>
 {
     try
     {
@@ -62,12 +72,19 @@ app.MapGet("/ready", async (NpgsqlDataSource dataSource) =>
     }
     catch (Exception ex)
     {
+        // Logged server-side only: the message carries host, port, and username.
+        logger.LogError(ex, "Readiness check failed.");
+
         return Results.Json(
-            new { status = "not ready", error = ex.Message },
+            new { status = "not ready" },
             statusCode: StatusCodes.Status503ServiceUnavailable);
     }
 })
     .AllowAnonymous();
+
+app.UseHttpsRedirection();
+
+app.UseCors("web");
 
 app.MapPost("/api/ping", async (CreatePingRequest request, NpgsqlDataSource dataSource) =>
 {
